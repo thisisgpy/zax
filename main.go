@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
+	"zax/config"
 	"zax/model"
 	"zax/service"
 
@@ -11,21 +12,22 @@ import (
 )
 
 func main() {
+	// 初始化日志
+	zapLogger := config.InitLogger()
+	defer zapLogger.Sync()
+	logger := zapLogger.Sugar()
 
-	var db *sqlx.DB
-	db, err := sqlx.Connect("mysql", "zax:7788uJmki*@tcp(rm-wz988oqn7627g91t3so.mysql.rds.aliyuncs.com:3306)/zax?charset=utf8mb4&parseTime=true&loc=Local")
+	// 初始化数据库
+	db, err := config.InitDB()
 	if err != nil {
-		fmt.Printf("连接数据库失败: %v", err)
+		logger.Errorf("连接数据库失败: %v", err)
 		return
 	}
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(time.Hour)
 
-	txWrapper := service.NewTxWrapper(db)
+	dbUtil := service.NewDBUtil(db)
 
 	org := model.SysOrg{
-		ID:         1,
+		ID:         6,
 		Code:       "0001",
 		Name:       "测试组织",
 		NameAbbr:   "测试",
@@ -38,7 +40,7 @@ func main() {
 		UpdateBy:   "admin",
 	}
 
-	e := txWrapper.RunTx(func(tx *sqlx.Tx) error {
+	e := dbUtil.RunTx(func(tx *sqlx.Tx) error {
 		res, err := tx.NamedExec("INSERT INTO sys_org (id, code, name, name_abbr, comment, parent_id, is_deleted, create_time, create_by, update_time, update_by) VALUES (:id, :code, :name, :name_abbr, :comment, :parent_id, :is_deleted, :create_time, :create_by, :update_time, :update_by)", org)
 		if err != nil {
 			return err
@@ -47,7 +49,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		fmt.Println(rows)
+		logger.Infof("插入组织成功.影响行数 %d", rows)
 		return nil
 	})
 	if e != nil {

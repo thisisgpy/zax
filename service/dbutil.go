@@ -4,18 +4,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type TxWrapper struct {
+type DBUtil struct {
 	db *sqlx.DB
 }
 
-func NewTxWrapper(dbInstance *sqlx.DB) *TxWrapper {
-	return &TxWrapper{
+func NewDBUtil(dbInstance *sqlx.DB) *DBUtil {
+	return &DBUtil{
 		db: dbInstance,
 	}
 }
 
-func (txWrapper *TxWrapper) RunTx(fn func(tx *sqlx.Tx) error) error {
-	tx, err := txWrapper.db.Beginx()
+func (dbUtil *DBUtil) RunTx(fn func(tx *sqlx.Tx) error) error {
+	tx, err := dbUtil.db.Beginx()
 	if err != nil {
 		return err
 	}
