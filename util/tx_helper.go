@@ -1,21 +1,21 @@
-package service
+package util
 
 import (
 	"github.com/jmoiron/sqlx"
 )
 
-type DBUtil struct {
+type TxHelper struct {
 	db *sqlx.DB
 }
 
-func NewDBUtil(dbInstance *sqlx.DB) *DBUtil {
-	return &DBUtil{
+func NewTxHelper(dbInstance *sqlx.DB) *TxHelper {
+	return &TxHelper{
 		db: dbInstance,
 	}
 }
 
-func (dbUtil *DBUtil) RunTx(fn func(tx *sqlx.Tx) error) error {
-	tx, err := dbUtil.db.Beginx()
+func (txHelper *TxHelper) RunTx(fn func(tx *sqlx.Tx) error) error {
+	tx, err := txHelper.db.Beginx()
 	if err != nil {
 		return err
 	}

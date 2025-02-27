@@ -15,3 +15,8 @@ type SysOrg struct {
 	UpdateTime time.Time `db:"update_time" json:"updateTime"` // 信息更新时间
 	UpdateBy   string    `db:"update_by" json:"updateBy"`     // 信息更新人
 }
+
+type SysOrgTree struct {
+	SysOrg
+	Children []SysOrgTree `json:"children"`
+}
