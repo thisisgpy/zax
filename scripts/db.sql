@@ -8,7 +8,6 @@ CREATE TABLE
     `name_abbr` VARCHAR(64) NOT NULL COMMENT '组织名称简称',
     `comment` VARCHAR(128) COMMENT '组织备注',
     `parent_id` BIGINT (20) DEFAULT 0 COMMENT '父级组织ID. 0表示没有父组织',
-    `is_deleted` TINYINT (1) DEFAULT 0 COMMENT '逻辑删除标记',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `create_by` VARCHAR(32) NOT NULL COMMENT '创建人',
     `update_time` DATETIME ON UPDATE CURRENT_TIMESTAMP COMMENT '信息更新时间',

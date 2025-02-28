@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"fmt"
+	"strings"
 	"zax/model"
 
 	"github.com/jmoiron/sqlx"
@@ -14,22 +16,7 @@ func NewOrgRepository(db *sqlx.DB) *OrgRepository {
 	return &OrgRepository{db: db}
 }
 
-func (repo *OrgRepository) Insert(tx *sqlx.Tx, org *model.SysOrg) error {
-	sql := `
-		INSERT INTO sys_org 
-		(
-			id, code, name, name_abbr, comment, parent_id, is_deleted, create_time, create_by, update_time, update_by
-		) 
-		VALUES 
-		(
-			:id, :code, :name, :name_abbr, :comment, :parent_id, :is_deleted, :create_time, :create_by, :update_time, :update_by
-		)
-	`
-	_, err := tx.NamedExec(sql, org)
-	return err
-}
-
-func (repo *OrgRepository) BatchInsert(tx *sqlx.Tx, orgs []*model.SysOrg) error {
+func (repo *OrgRepository) Insert(tx *sqlx.Tx, orgs []*model.SysOrg) error {
 	sql := `
 		INSERT INTO sys_org 
 		(
@@ -45,20 +32,36 @@ func (repo *OrgRepository) BatchInsert(tx *sqlx.Tx, orgs []*model.SysOrg) error 
 }
 
 func (repo *OrgRepository) UpdateSelective(tx *sqlx.Tx, org *model.SysOrg) error {
-	sql := `
-        UPDATE sys_org
-        SET update_time = :update_time
-        {{if .Code}}        , code = :code{{end}}
-        {{if .Name}}        , name = :name{{end}}
-        {{if .NameAbbr}}    , name_abbr = :name_abbr{{end}}
-        {{if .Comment}}     , comment = :comment{{end}}
-        {{if .ParentId}}    , parent_id = :parent_id{{end}}
-        {{if .IsDeleted}}   , is_deleted = :is_deleted{{end}}
-        {{if .UpdateBy}}    , update_by = :update_by{{end}}
-				{{if .UpdateTime}}  , update_time = :update_time{{end}}
-        WHERE id = :id
-    `
-	_, err := tx.NamedExec(sql, org)
+	var fields []string
+
+	if org.Code != "" {
+		fields = append(fields, "code = :code")
+	}
+	if org.Name != "" {
+		fields = append(fields, "name = :name")
+	}
+	if org.NameAbbr != "" {
+		fields = append(fields, "name_abbr = :name_abbr")
+	}
+	if org.Comment != "" {
+		fields = append(fields, "comment = :comment")
+	}
+	if org.ParentID != 0 {
+		fields = append(fields, "parent_id = :parent_id")
+	}
+	if !org.UpdateTime.IsZero() {
+		fields = append(fields, "update_time = :update_time")
+	}
+	if org.UpdateBy != "" {
+		fields = append(fields, "update_by = :update_by")
+	}
+
+	if len(fields) == 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf("UPDATE sys_org SET %s WHERE id = :id", strings.Join(fields, ", "))
+	_, err := tx.NamedExec(query, org)
 	return err
 }
 
@@ -69,9 +72,39 @@ func (repo *OrgRepository) SelectById(id int64) (*model.SysOrg, error) {
 		FROM 
 			sys_org 
 		WHERE 
-			id = :id AND is_deleted = false
+			id = ?
 	`
 	var org model.SysOrg
-	err := repo.db.Get(&org, sql, map[string]interface{}{"id": id})
+	err := repo.db.Get(&org, sql, id)
 	return &org, err
+}
+
+func (repo *OrgRepository) SelectByParentID(parentID int64) ([]*model.SysOrg, error) {
+	sql := `
+		SELECT 
+			id, code, name, name_abbr, comment, parent_id, is_deleted, create_time, create_by, update_time, update_by 
+		FROM 
+			sys_org 
+		WHERE 
+			parent_id = ?
+		ORDER BY
+			create_time ASC
+	`
+	var orgs []*model.SysOrg
+	err := repo.db.Select(&orgs, sql, parentID)
+	return orgs, err
+}
+
+func (repo *OrgRepository) SelectMaxCode(parentID int64) (string, error) {
+	sql := `
+		SELECT 
+			MAX(code) 
+		FROM 
+			sys_org 
+		WHERE 
+			parent_id = ?
+	`
+	var code string
+	err := repo.db.Get(&code, sql, parentID)
+	return code, err
 }
