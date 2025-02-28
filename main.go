@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 	"zax/config"
+	"zax/model"
 	"zax/repository"
 	"zax/service"
 	"zax/util"
@@ -34,21 +36,23 @@ func main() {
 
 	orgService := service.NewOrgService(logger, txHelper, orgRepo)
 
-	// sysOrg := &model.SysOrg{
-	// 	ID:         100,
-	// 	Code:       "0004",
-	// 	Name:       "总公司4",
-	// 	NameAbbr:   "总部4",
-	// 	Comment:    "这是一个测试组织4",
-	// 	ParentID:   0,
-	// 	IsDeleted:  false,
-	// 	CreateTime: time.Now(),
-	// 	CreateBy:   "admin",
-	// 	UpdateTime: time.Now(),
-	// 	UpdateBy:   "admin",
-	// }
+	sysOrg := &model.SysOrg{
+		ID:         3,
+		Code:       "0003",
+		Name:       "测试组织3",
+		NameAbbr:   "测试3",
+		Comment:    "这是一个测试组织3",
+		ParentID:   1,
+		CreateTime: time.Now(),
+		CreateBy:   "admin",
+		UpdateTime: time.Now(),
+		UpdateBy:   "admin",
+	}
 
-	code, _ := orgService.GenerateOrgCode(100)
-	fmt.Println(code)
+	_, err = orgService.UpdateOrg(sysOrg)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>")
 	wg.Wait()
 }

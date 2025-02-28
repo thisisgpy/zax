@@ -20,11 +20,11 @@ func (repo *OrgRepository) Insert(tx *sqlx.Tx, orgs []*model.SysOrg) error {
 	sql := `
 		INSERT INTO sys_org 
 		(
-			id, code, name, name_abbr, comment, parent_id, is_deleted, create_time, create_by, update_time, update_by
+			id, code, name, name_abbr, comment, parent_id, create_time, create_by, update_time, update_by
 		) 
 		VALUES 
 		(
-			:id, :code, :name, :name_abbr, :comment, :parent_id, :is_deleted, :create_time, :create_by, :update_time, :update_by
+			:id, :code, :name, :name_abbr, :comment, :parent_id, :create_time, :create_by, :update_time, :update_by
 		)
 	`
 	_, err := tx.NamedExec(sql, orgs)
@@ -68,7 +68,7 @@ func (repo *OrgRepository) UpdateSelective(tx *sqlx.Tx, org *model.SysOrg) error
 func (repo *OrgRepository) SelectById(id int64) (*model.SysOrg, error) {
 	sql := `
 		SELECT 
-			id, code, name, name_abbr, comment, parent_id, is_deleted, create_time, create_by, update_time, update_by 
+			id, code, name, name_abbr, comment, parent_id, create_time, create_by, update_time, update_by 
 		FROM 
 			sys_org 
 		WHERE 
@@ -82,7 +82,7 @@ func (repo *OrgRepository) SelectById(id int64) (*model.SysOrg, error) {
 func (repo *OrgRepository) SelectByParentID(parentID int64) ([]*model.SysOrg, error) {
 	sql := `
 		SELECT 
-			id, code, name, name_abbr, comment, parent_id, is_deleted, create_time, create_by, update_time, update_by 
+			id, code, name, name_abbr, comment, parent_id, create_time, create_by, update_time, update_by 
 		FROM 
 			sys_org 
 		WHERE 
@@ -107,4 +107,20 @@ func (repo *OrgRepository) SelectMaxCode(parentID int64) (string, error) {
 	var code string
 	err := repo.db.Get(&code, sql, parentID)
 	return code, err
+}
+
+func (repo *OrgRepository) SelectDescendants(orgCode string) ([]*model.SysOrg, error) {
+	sql := `
+		SELECT 
+			id, code, name, name_abbr, comment, parent_id, create_time, create_by, update_time, update_by 
+		FROM 
+			sys_org 
+		WHERE 
+			code LIKE CONCAT(?, '%') AND code != ?
+		ORDER BY
+			create_time ASC
+	`
+	var orgs []*model.SysOrg
+	err := repo.db.Select(&orgs, sql, orgCode, orgCode)
+	return orgs, err
 }
