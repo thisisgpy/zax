@@ -88,7 +88,7 @@ func (repo *OrgRepository) SelectByParentID(parentID int64) ([]*model.SysOrg, er
 		WHERE 
 			parent_id = ?
 		ORDER BY
-			create_time ASC
+			code ASC
 	`
 	var orgs []*model.SysOrg
 	err := repo.db.Select(&orgs, sql, parentID)

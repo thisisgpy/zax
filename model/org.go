@@ -16,14 +16,10 @@ type SysOrg struct {
 	CreateBy   string    `db:"create_by" json:"createBy"`     // 创建人
 	UpdateTime time.Time `db:"update_time" json:"updateTime"` // 信息更新时间
 	UpdateBy   string    `db:"update_by" json:"updateBy"`     // 信息更新人
+	Children   []*SysOrg `json:"children"`
 }
 
 func (o *SysOrg) ToString() string {
-	return fmt.Sprintf("SysOrg{ID:%d, Code:%s, Name:%s, NameAbbr:%s, Comment:%s, ParentID:%d, CreateTime:%s, CreateBy:%s, UpdateTime:%s, UpdateBy:%s}",
-		o.ID, o.Code, o.Name, o.NameAbbr, o.Comment, o.ParentID, o.CreateTime, o.CreateBy, o.UpdateTime, o.UpdateBy)
-}
-
-type SysOrgTree struct {
-	SysOrg
-	Children []SysOrgTree `json:"children"`
+	return fmt.Sprintf("SysOrg{ID:%d, Code:%s, Name:%s, NameAbbr:%s, Comment:%s, ParentID:%d, CreateTime:%s, CreateBy:%s, UpdateTime:%s, UpdateBy:%s, Children:%v}",
+		o.ID, o.Code, o.Name, o.NameAbbr, o.Comment, o.ParentID, o.CreateTime, o.CreateBy, o.UpdateTime, o.UpdateBy, o.Children)
 }

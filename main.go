@@ -1,11 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 	"zax/config"
-	"zax/model"
 	"zax/repository"
 	"zax/service"
 	"zax/util"
@@ -36,23 +35,25 @@ func main() {
 
 	orgService := service.NewOrgService(logger, txHelper, orgRepo)
 
-	sysOrg := &model.SysOrg{
-		ID:         3,
-		Code:       "0003",
-		Name:       "测试组织3",
-		NameAbbr:   "测试3",
-		Comment:    "这是一个测试组织3",
-		ParentID:   1,
-		CreateTime: time.Now(),
-		CreateBy:   "admin",
-		UpdateTime: time.Now(),
-		UpdateBy:   "admin",
-	}
+	// sysOrg := &model.SysOrg{
+	// 	ID:         3,
+	// 	Code:       "0003",
+	// 	Name:       "测试组织3",
+	// 	NameAbbr:   "测试3",
+	// 	Comment:    "这是一个测试组织3",
+	// 	ParentID:   1,
+	// 	CreateTime: time.Now(),
+	// 	CreateBy:   "admin",
+	// 	UpdateTime: time.Now(),
+	// 	UpdateBy:   "admin",
+	// }
 
-	_, err = orgService.UpdateOrg(sysOrg)
+	orgTrees, err := orgService.FindOrgTrees()
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Errorf("查询组织树失败: %v", err)
+		return
 	}
-	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>")
+	jsonData, _ := json.Marshal(orgTrees)
+	fmt.Println(string(jsonData))
 	wg.Wait()
 }
