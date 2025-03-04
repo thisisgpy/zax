@@ -15,6 +15,7 @@ func NewOrgHandler(orgService *service.OrgService) *OrgHandler {
 	return &OrgHandler{orgService: orgService}
 }
 
+// /org/:id
 func (h *OrgHandler) FindOrgById(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	org, err := h.orgService.FindOrgById(id)
@@ -25,6 +26,7 @@ func (h *OrgHandler) FindOrgById(c *gin.Context) {
 	Success(c, org)
 }
 
+// /org/children/:parentID
 func (h *OrgHandler) FindChildren(c *gin.Context) {
 	parentID, _ := strconv.ParseInt(c.Param("parentID"), 10, 64)
 	orgs, err := h.orgService.FindChildren(parentID)
@@ -35,6 +37,7 @@ func (h *OrgHandler) FindChildren(c *gin.Context) {
 	Success(c, orgs)
 }
 
+// /org/trees?rootOrgID=
 func (h *OrgHandler) FindOrgTrees(c *gin.Context) {
 	rootOrgID, _ := strconv.ParseInt(c.DefaultQuery("rootOrgID", "0"), 10, 64)
 	trees, err := h.orgService.FindOrgTrees(rootOrgID)

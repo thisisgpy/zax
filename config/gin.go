@@ -12,6 +12,12 @@ import (
 func GinInit(logger *zap.SugaredLogger) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "data": nil, "message": "404 Not Found"})
+	})
+	r.NoMethod(func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"success": false, "data": nil, "message": "405 Method Not Allowed"})
+	})
 	r.Use(GinRecovery(logger))
 	r.Use(GinLogger(logger))
 
@@ -35,7 +41,7 @@ func GinRecovery(logger *zap.SugaredLogger) gin.HandlerFunc {
 				default:
 					message = err.(string)
 				}
-				c.JSON(http.StatusOK, gin.H{"success": false, "data": nil, "message": message})
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "data": nil, "message": message})
 			}
 		}()
 		c.Next()

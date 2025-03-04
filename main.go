@@ -23,6 +23,10 @@ func main() {
 		logger.Errorf("连接数据库失败: %v", err)
 		return
 	}
+
+	// 初始化雪花算法
+	idGen, _ := util.NewSnowflake(1)
+
 	// 初始化事务助手
 	txHelper := util.NewTxHelper(db)
 
@@ -30,7 +34,7 @@ func main() {
 	orgRepo := repository.NewOrgRepository(db)
 
 	// 业务层初始化
-	orgService := service.NewOrgService(logger, txHelper, orgRepo)
+	orgService := service.NewOrgService(logger, idGen, txHelper, orgRepo)
 
 	// 控制器初始化
 	orgHandler := handler.NewOrgHandler(orgService)

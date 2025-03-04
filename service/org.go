@@ -24,12 +24,13 @@ type OrgInterface interface {
 
 type OrgService struct {
 	logger   *zap.SugaredLogger
+	idGen    *util.Snowflake
 	txHelper *util.TxHelper
 	orgRepo  *repository.OrgRepository
 }
 
-func NewOrgService(logger *zap.SugaredLogger, txHelper *util.TxHelper, orgRepo *repository.OrgRepository) *OrgService {
-	return &OrgService{logger: logger, txHelper: txHelper, orgRepo: orgRepo}
+func NewOrgService(logger *zap.SugaredLogger, idGen *util.Snowflake, txHelper *util.TxHelper, orgRepo *repository.OrgRepository) *OrgService {
+	return &OrgService{logger: logger, idGen: idGen, txHelper: txHelper, orgRepo: orgRepo}
 }
 
 // 新增组织
@@ -41,7 +42,7 @@ func (service *OrgService) CreateOrg(org *model.SysOrg) (bool, error) {
 	}
 	org.Code = orgCode
 	// 生成 ID
-	// TODO
+	org.ID = service.idGen.GenerateID()
 	err = service.txHelper.RunTx(func(tx *sqlx.Tx) error {
 		e := service.orgRepo.Insert(tx, []*model.SysOrg{org})
 		if e != nil {
@@ -146,7 +147,7 @@ func (service *OrgService) FindOrgTrees(rootOrgID int64) ([]*model.SysOrg, error
 	// 查找所有子孙组织
 	var orgTrees []*model.SysOrg
 	for _, rootOrg := range rootOrgs {
-		descendants, err := service.findDescendants(rootOrg.ID)
+		descendants, err := service.FindDescendants(rootOrg.ID)
 		if err != nil {
 			return nil, util.NewZaxError(err.Error())
 		}
@@ -178,14 +179,14 @@ func (service *OrgService) FindCurrentOrgTree(orgID int64) (*model.SysOrg, error
 	return trees[0], nil
 }
 
-// 递归查找子孙组织
-func (service *OrgService) findDescendants(parentID int64) ([]*model.SysOrg, error) {
-	orgs, err := service.orgRepo.SelectByParentID(parentID)
+// 查找指定组织的所有子孙组织
+func (service *OrgService) FindDescendants(orgID int64) ([]*model.SysOrg, error) {
+	orgs, err := service.orgRepo.SelectByParentID(orgID)
 	if err != nil {
 		return nil, util.NewZaxError("查询子孙组织失败")
 	}
 	for i := range orgs {
-		descendants, err := service.findDescendants(orgs[i].ID)
+		descendants, err := service.FindDescendants(orgs[i].ID)
 		if err != nil {
 			return nil, util.NewZaxError("查询子孙组织失败")
 		}
@@ -194,9 +195,10 @@ func (service *OrgService) findDescendants(parentID int64) ([]*model.SysOrg, err
 	return orgs, nil
 }
 
-// 生成组织编码
+// 生成组织编码. parentID 是当前组织的父组织ID，组织 code 一定是根据父级的 code 来生成.
 func (service *OrgService) GenerateOrgCode(parentID int64) (string, error) {
 	var parentOrgCode string
+	// parentID 不为 0，表示当前要新增的组织不是顶级组织, 先查找父组织的编码
 	if parentID != 0 {
 		org, err := service.orgRepo.SelectById(parentID)
 		if err != nil {
@@ -205,21 +207,27 @@ func (service *OrgService) GenerateOrgCode(parentID int64) (string, error) {
 		}
 		parentOrgCode = org.Code
 	}
+	// 查找父组织的子组织中当前的最大编码
 	maxCode, err := service.orgRepo.SelectMaxCode(parentID)
+	// 找不到已使用的最大编码则说明当前要新增的组织是第一个子组织, 编码为父组织编码+0001
 	if err != nil {
 		return fmt.Sprintf("%s0001", parentOrgCode), nil
 	}
 	var nextCode int
+	// 防御性判断
 	if maxCode == "" {
 		nextCode = 1
 	} else {
+		// 截取已使用最大编码的最后四位，并转换为整数
 		maxCodeSerial, _ := strconv.Atoi(maxCode[len(maxCode)-4:])
+		// 加 1 得到下一个编码
 		nextCode = maxCodeSerial + 1
 	}
+	// 组合父级组织编码和下一个编码序号(不足4位前面补0)
 	return fmt.Sprintf("%s%04d", parentOrgCode, nextCode), nil
 }
 
-// 更新子孙组织的编码
+// 更新当前组织的子孙组织的编码. oldOrgCode 为当前组织的旧编码, newOrgCode 为当前组织的新编码
 func (service *OrgService) clacDescendantCode(oldOrgCode string, newOrgCode string) ([]*model.SysOrg, error) {
 	var updatedDescendants []*model.SysOrg
 	descendants, err := service.orgRepo.SelectDescendants(oldOrgCode)

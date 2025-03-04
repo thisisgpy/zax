@@ -17,5 +17,5 @@ func Success(c *gin.Context, data interface{}) {
 }
 
 func Error(c *gin.Context, message string) {
-	c.JSON(http.StatusInternalServerError, ZaxResult{Success: false, Data: nil, Message: message})
+	c.JSON(http.StatusOK, ZaxResult{Success: false, Data: nil, Message: message})
 }
