@@ -95,6 +95,20 @@ func (repo *OrgRepository) SelectByParentID(parentID int64) ([]*model.SysOrg, er
 	return orgs, err
 }
 
+func (repo *OrgRepository) SelectByCode(code string) (*model.SysOrg, error) {
+	sql := `
+		SELECT 
+			id, code, name, name_abbr, comment, parent_id, create_time, create_by, update_time, update_by 
+		FROM 
+			sys_org 
+		WHERE 
+			code = ?
+	`
+	var org model.SysOrg
+	err := repo.db.Get(&org, sql, code)
+	return &org, err
+}
+
 func (repo *OrgRepository) SelectMaxCode(parentID int64) (string, error) {
 	sql := `
 		SELECT 

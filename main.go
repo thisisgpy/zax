@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"sync"
 	"zax/config"
+	"zax/handler"
 	"zax/repository"
 	"zax/service"
 	"zax/util"
@@ -13,9 +11,6 @@ import (
 )
 
 func main() {
-
-	var wg sync.WaitGroup
-	wg.Add(1)
 
 	// 初始化日志
 	zapLogger := config.InitLogger()
@@ -28,32 +23,27 @@ func main() {
 		logger.Errorf("连接数据库失败: %v", err)
 		return
 	}
-
-	orgRepo := repository.NewOrgRepository(db)
-
+	// 初始化事务助手
 	txHelper := util.NewTxHelper(db)
 
+	// 数据访问层初始化
+	orgRepo := repository.NewOrgRepository(db)
+
+	// 业务层初始化
 	orgService := service.NewOrgService(logger, txHelper, orgRepo)
 
-	// sysOrg := &model.SysOrg{
-	// 	ID:         3,
-	// 	Code:       "0003",
-	// 	Name:       "测试组织3",
-	// 	NameAbbr:   "测试3",
-	// 	Comment:    "这是一个测试组织3",
-	// 	ParentID:   1,
-	// 	CreateTime: time.Now(),
-	// 	CreateBy:   "admin",
-	// 	UpdateTime: time.Now(),
-	// 	UpdateBy:   "admin",
-	// }
+	// 控制器初始化
+	orgHandler := handler.NewOrgHandler(orgService)
 
-	orgTrees, err := orgService.FindOrgTrees()
-	if err != nil {
-		logger.Errorf("查询组织树失败: %v", err)
-		return
+	// 初始化gin
+	r := config.GinInit(logger)
+
+	// 路由注册
+	handler.RegisterOrgHandlers(r, orgHandler)
+
+	logger.Info("Server started on port 8899")
+
+	if err := r.Run(":8899"); err != nil {
+		logger.Fatalf("Failed to start server: %v", err)
 	}
-	jsonData, _ := json.Marshal(orgTrees)
-	fmt.Println(string(jsonData))
-	wg.Wait()
 }

@@ -13,6 +13,15 @@ import (
 	"go.uber.org/zap"
 )
 
+type OrgInterface interface {
+	CreateOrg(org *model.SysOrg) (bool, error)
+	UpdateOrg(org *model.SysOrg) (bool, error)
+	FindOrgById(id int64) (*model.SysOrg, error)
+	FindChildren(parentID int64) ([]*model.SysOrg, error)
+	FindOrgTrees(rootOrgID int64) ([]*model.SysOrg, error)
+	FindCurrentOrgTree(orgID int64) (*model.SysOrg, error)
+}
+
 type OrgService struct {
 	logger   *zap.SugaredLogger
 	txHelper *util.TxHelper
@@ -114,12 +123,25 @@ func (service *OrgService) FindChildren(parentID int64) ([]*model.SysOrg, error)
 	return service.orgRepo.SelectByParentID(parentID)
 }
 
-// 查询组织树
-func (service *OrgService) FindOrgTrees() ([]*model.SysOrg, error) {
-	// 查找所有根组织
-	rootOrgs, err := service.orgRepo.SelectByParentID(0)
-	if err != nil {
-		return nil, util.NewZaxError("查询根组织失败")
+// 查询组织树. 如果 rootOrgID 为 0, 则查询所有组织树. 否则查询指定组织树
+func (service *OrgService) FindOrgTrees(rootOrgID int64) ([]*model.SysOrg, error) {
+	var rootOrgs []*model.SysOrg
+	if rootOrgID == 0 {
+		// 查找所有根组织
+		orgs, err := service.orgRepo.SelectByParentID(0)
+		if err != nil {
+			return nil, util.NewZaxError("查询根组织失败")
+		}
+		rootOrgs = orgs
+	} else {
+		org, err := service.orgRepo.SelectById(rootOrgID)
+		if err != nil {
+			return nil, util.NewZaxErrorf("查询根组织失败, 根组织ID:%d", rootOrgID)
+		}
+		if org.ParentID != 0 {
+			return nil, util.NewZaxErrorf("不是根组织, 组织ID:%d", rootOrgID)
+		}
+		rootOrgs = append(rootOrgs, org)
 	}
 	// 查找所有子孙组织
 	var orgTrees []*model.SysOrg
@@ -132,6 +154,28 @@ func (service *OrgService) FindOrgTrees() ([]*model.SysOrg, error) {
 		orgTrees = append(orgTrees, rootOrg)
 	}
 	return orgTrees, nil
+}
+
+// 查询指定组织所在的组织树
+func (service *OrgService) FindCurrentOrgTree(orgID int64) (*model.SysOrg, error) {
+	// 查询指定组织的 code
+	currentOrg, err := service.orgRepo.SelectById(orgID)
+	if err != nil {
+		return nil, util.NewZaxErrorf("查询组织失败, 组织ID:%d", orgID)
+	}
+	// 确定当前组织的根组织 code
+	rootCode := currentOrg.Code[0:4]
+	// 查询根组织
+	org, err := service.orgRepo.SelectByCode(rootCode)
+	if err != nil {
+		return nil, util.NewZaxErrorf("查询根组织失败, 根组织Code:%s", rootCode)
+	}
+	// 查询根组织所在的组织树
+	trees, err := service.FindOrgTrees(org.ID)
+	if err != nil {
+		return nil, util.NewZaxError(err.Error())
+	}
+	return trees[0], nil
 }
 
 // 递归查找子孙组织
