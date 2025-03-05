@@ -3,6 +3,7 @@ package handler
 import (
 	"strconv"
 	"zax/service"
+	"zax/util"
 
 	"zax/model"
 
@@ -17,13 +18,35 @@ func NewOrgHandler(orgService *service.OrgService) *OrgHandler {
 	return &OrgHandler{orgService: orgService}
 }
 
+// /org/create
 func (h *OrgHandler) CreateOrg(c *gin.Context) {
 	org := &model.SysOrg{}
 	if err := c.ShouldBindJSON(&org); err != nil {
 		Error(c, err.Error())
 		return
 	}
+	username := c.GetString("username")
+	org.CreateBy = &username
+	org.CreateTime = util.Now()
 	_, err := h.orgService.CreateOrg(org)
+	if err != nil {
+		Error(c, err.Error())
+		return
+	}
+	Success(c, org)
+}
+
+// /org/update
+func (h *OrgHandler) UpdateOrg(c *gin.Context) {
+	org := &model.SysOrg{}
+	if err := c.ShouldBindJSON(&org); err != nil {
+		Error(c, err.Error())
+		return
+	}
+	username := c.GetString("username")
+	org.UpdateBy = &username
+	org.UpdateTime = util.Now()
+	_, err := h.orgService.UpdateOrg(org)
 	if err != nil {
 		Error(c, err.Error())
 		return

@@ -63,6 +63,20 @@ func GinLogger(logger *zap.SugaredLogger) gin.HandlerFunc {
 	}
 }
 
+func GinContext() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("X-Token")
+		if token != "" {
+			c.Set("username", "admin")
+		} else {
+			c.JSON(http.StatusOK, gin.H{"success": false, "data": nil, "message": "Unauthorized"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func GinJson() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer = &GinJsonWriter{

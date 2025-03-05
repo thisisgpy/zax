@@ -42,10 +42,6 @@ func (service *OrgService) CreateOrg(org *model.SysOrg) (bool, error) {
 	org.Code = orgCode
 	// 生成 ID
 	org.ID = service.idGen.GenerateID()
-	// 设置创建时间
-	org.CreateTime = util.Now()
-	// 设置创建人
-	org.CreateBy = util.GetUser()
 	// 执行事务
 	err = service.txHelper.RunTx(func(tx *sqlx.Tx) error {
 		e := service.orgRepo.Insert(tx, []*model.SysOrg{org})
@@ -68,8 +64,6 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 	}
 	var preUpdateOrgs []*model.SysOrg
 	if org.ParentID == currentOrg.ParentID {
-		org.UpdateTime = util.Now()
-		org.UpdateBy = util.GetUser()
 		preUpdateOrgs = append(preUpdateOrgs, org)
 	} else {
 		// 检查新的父组织是否存在
@@ -93,8 +87,6 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 			return false, util.NewZaxError(err.Error())
 		}
 		org.Code = newOrgCode
-		org.UpdateTime = util.Now()
-		org.UpdateBy = util.GetUser()
 		preUpdateOrgs = append(preUpdateOrgs, org)
 		// 重新计算子孙组织的 code
 		updatedDescendants, err := service.clacDescendantCode(currentOrg.Code, newOrgCode)
@@ -106,11 +98,15 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 	// 更新所有发生变动的组织
 	service.logger.Infof("组织ID:%d, 旧编码:%s, 新编码:%s.本次要更新的组织有 %d 个", org.ID, currentOrg.Code, org.Code, len(preUpdateOrgs))
 	err = service.txHelper.RunTx(func(tx *sqlx.Tx) error {
-		for _, org := range preUpdateOrgs {
-			e := service.orgRepo.UpdateSelective(tx, org)
+		for _, preUpdateOrg := range preUpdateOrgs {
+			// 使用入参的审计信息
+			preUpdateOrg.UpdateTime = org.UpdateTime
+			preUpdateOrg.UpdateBy = org.UpdateBy
+			// 更新组织
+			e := service.orgRepo.UpdateSelective(tx, preUpdateOrg)
 			if e != nil {
-				service.logger.Errorf("更新组织失败, 错误信息:%v. 数据:%s", e, org.ToString())
-				return util.NewZaxError(fmt.Sprintf("更新组织失败, 错误信息:%v. 数据:%s", e, org.ToString()))
+				service.logger.Errorf("更新组织失败, 错误信息:%v. 数据:%s", e, preUpdateOrg.ToString())
+				return util.NewZaxError(fmt.Sprintf("更新组织失败, 错误信息:%v. 数据:%s", e, preUpdateOrg.ToString()))
 			}
 		}
 		return nil
