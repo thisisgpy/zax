@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"zax/service"
 
+	"zax/model"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,6 +15,20 @@ type OrgHandler struct {
 
 func NewOrgHandler(orgService *service.OrgService) *OrgHandler {
 	return &OrgHandler{orgService: orgService}
+}
+
+func (h *OrgHandler) CreateOrg(c *gin.Context) {
+	org := &model.SysOrg{}
+	if err := c.ShouldBindJSON(&org); err != nil {
+		Error(c, err.Error())
+		return
+	}
+	_, err := h.orgService.CreateOrg(org)
+	if err != nil {
+		Error(c, err.Error())
+		return
+	}
+	Success(c, org)
 }
 
 // /org/:id

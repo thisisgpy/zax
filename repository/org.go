@@ -20,11 +20,11 @@ func (repo *OrgRepository) Insert(tx *sqlx.Tx, orgs []*model.SysOrg) error {
 	sql := `
 		INSERT INTO sys_org 
 		(
-			id, code, name, name_abbr, comment, parent_id, create_time, create_by, update_time, update_by
+			id, code, name, name_abbr, comment, parent_id, create_time, create_by
 		) 
 		VALUES 
 		(
-			:id, :code, :name, :name_abbr, :comment, :parent_id, :create_time, :create_by, :update_time, :update_by
+			:id, :code, :name, :name_abbr, :comment, :parent_id, :create_time, :create_by
 		)
 	`
 	_, err := tx.NamedExec(sql, orgs)
@@ -40,19 +40,19 @@ func (repo *OrgRepository) UpdateSelective(tx *sqlx.Tx, org *model.SysOrg) error
 	if org.Name != "" {
 		fields = append(fields, "name = :name")
 	}
-	if org.NameAbbr != "" {
+	if org.NameAbbr != nil && *org.NameAbbr != "" {
 		fields = append(fields, "name_abbr = :name_abbr")
 	}
-	if org.Comment != "" {
+	if org.Comment != nil && *org.Comment != "" {
 		fields = append(fields, "comment = :comment")
 	}
 	if org.ParentID != 0 {
 		fields = append(fields, "parent_id = :parent_id")
 	}
-	if !org.UpdateTime.IsZero() {
+	if org.UpdateTime != nil {
 		fields = append(fields, "update_time = :update_time")
 	}
-	if org.UpdateBy != "" {
+	if org.UpdateBy != nil && *org.UpdateBy != "" {
 		fields = append(fields, "update_by = :update_by")
 	}
 

@@ -3,10 +3,11 @@ package handler
 import "github.com/gin-gonic/gin"
 
 func RegisterOrgHandlers(engine *gin.Engine, orgHandler *OrgHandler) {
-	v1 := engine.Group("/v1")
+	org := engine.Group("/api/v1/org")
 	{
-		v1.GET("/org/:id", orgHandler.FindOrgById)
-		v1.GET("/org/children/:parentID", orgHandler.FindChildren)
-		v1.GET("/org/trees", orgHandler.FindOrgTrees)
+		org.POST("/create", orgHandler.CreateOrg)
+		org.GET("/:id", orgHandler.FindOrgById)
+		org.GET("/children/:parentID", orgHandler.FindChildren)
+		org.GET("/trees", orgHandler.FindOrgTrees)
 	}
 }

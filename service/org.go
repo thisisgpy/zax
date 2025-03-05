@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 	"zax/model"
 	"zax/repository"
 	"zax/util"
@@ -43,6 +42,11 @@ func (service *OrgService) CreateOrg(org *model.SysOrg) (bool, error) {
 	org.Code = orgCode
 	// 生成 ID
 	org.ID = service.idGen.GenerateID()
+	// 设置创建时间
+	org.CreateTime = util.Now()
+	// 设置创建人
+	org.CreateBy = util.GetUser()
+	// 执行事务
 	err = service.txHelper.RunTx(func(tx *sqlx.Tx) error {
 		e := service.orgRepo.Insert(tx, []*model.SysOrg{org})
 		if e != nil {
@@ -64,8 +68,8 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 	}
 	var preUpdateOrgs []*model.SysOrg
 	if org.ParentID == currentOrg.ParentID {
-		org.UpdateTime = time.Now()
-		org.UpdateBy = "admin"
+		org.UpdateTime = util.Now()
+		org.UpdateBy = util.GetUser()
 		preUpdateOrgs = append(preUpdateOrgs, org)
 	} else {
 		// 检查新的父组织是否存在
@@ -89,8 +93,8 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 			return false, util.NewZaxError(err.Error())
 		}
 		org.Code = newOrgCode
-		org.UpdateTime = time.Now()
-		org.UpdateBy = "admin"
+		org.UpdateTime = util.Now()
+		org.UpdateBy = util.GetUser()
 		preUpdateOrgs = append(preUpdateOrgs, org)
 		// 重新计算子孙组织的 code
 		updatedDescendants, err := service.clacDescendantCode(currentOrg.Code, newOrgCode)
@@ -116,7 +120,12 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 
 // 查询组织
 func (service *OrgService) FindOrgById(id int64) (*model.SysOrg, error) {
-	return service.orgRepo.SelectById(id)
+	org, err := service.orgRepo.SelectById(id)
+	if err != nil {
+		service.logger.Errorf("查询组织失败, 错误信息:%v. 组织ID:%d", err, id)
+		return nil, util.NewZaxErrorf("组织不存在。ID:%d", id)
+	}
+	return org, nil
 }
 
 // 查询子组织
@@ -237,8 +246,8 @@ func (service *OrgService) clacDescendantCode(oldOrgCode string, newOrgCode stri
 	for _, descendant := range descendants {
 		descendantNewCode := strings.Replace(descendant.Code, oldOrgCode, newOrgCode, 1)
 		descendant.Code = descendantNewCode
-		descendant.UpdateTime = time.Now()
-		descendant.UpdateBy = "admin"
+		descendant.UpdateTime = util.Now()
+		descendant.UpdateBy = util.GetUser()
 		updatedDescendants = append(updatedDescendants, descendant)
 	}
 	return updatedDescendants, nil
