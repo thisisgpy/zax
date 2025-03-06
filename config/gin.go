@@ -26,7 +26,7 @@ func GinInit(logger *zap.SugaredLogger) *gin.Engine {
 	})
 	r.Use(GinRecovery(logger))
 	r.Use(GinLogger(logger))
-
+	r.Use(GinContext())
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": "pong", "message": "pong"})
 	})

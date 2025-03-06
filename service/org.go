@@ -35,7 +35,7 @@ func NewOrgService(logger *zap.SugaredLogger, idGen *util.Snowflake, txHelper *u
 // 新增组织
 func (service *OrgService) CreateOrg(org *model.SysOrg) (bool, error) {
 	// 计算 code
-	orgCode, err := service.GenerateOrgCode(org.ParentID)
+	orgCode, err := service.GenerateOrgCode(*org.ParentID)
 	if err != nil {
 		return false, util.NewZaxError(err.Error())
 	}
@@ -63,12 +63,14 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 		return false, util.NewZaxError(fmt.Sprintf("查询组织失败, 组织ID:%d", org.ID))
 	}
 	var preUpdateOrgs []*model.SysOrg
+	// 如果父组织ID没有变化, 则只更新组织信息
 	if org.ParentID == currentOrg.ParentID {
-		preUpdateOrgs = append(preUpdateOrgs, org)
+		currentOrg.MapNotNull(org)
+		preUpdateOrgs = append(preUpdateOrgs, currentOrg)
 	} else {
 		// 检查新的父组织是否存在
-		if org.ParentID != 0 {
-			parentOrg, err := service.orgRepo.SelectById(org.ParentID)
+		if org.ParentID != nil && *org.ParentID != 0 {
+			parentOrg, err := service.orgRepo.SelectById(*org.ParentID)
 			if err != nil {
 				return false, util.NewZaxError(fmt.Sprintf("查询父组织失败, 父组织ID:%d", org.ParentID))
 			}
@@ -76,13 +78,13 @@ func (service *OrgService) UpdateOrg(org *model.SysOrg) (bool, error) {
 			if parentOrg.ID == org.ID {
 				return false, util.NewZaxError(fmt.Sprintf("父组织不能是自己, 父组织ID:%d", org.ParentID))
 			}
-			// 检查父组织是否是自己的子组织
-			if len(parentOrg.Code) > len(org.Code) && parentOrg.Code[:len(org.Code)] == org.Code {
-				return false, util.NewZaxErrorf("父组织不能是自己的子组织.当前组织Code:%s, 目标父组织Code:%s", org.Code, parentOrg.Code)
+			// 检查父组织是否是自己的子组织.这里要用 currentOrg 的 code 和 parentOrg 的 code 比较，因为入参 org 的 code 可能没有赋值
+			if len(parentOrg.Code) > len(currentOrg.Code) && parentOrg.Code[:len(currentOrg.Code)] == currentOrg.Code {
+				return false, util.NewZaxErrorf("父组织不能是自己的子组织.当前组织Code:%s, 目标父组织Code:%s", currentOrg.Code, parentOrg.Code)
 			}
 		}
 		// 为组织生成新 code
-		newOrgCode, err := service.GenerateOrgCode(org.ParentID)
+		newOrgCode, err := service.GenerateOrgCode(*org.ParentID)
 		if err != nil {
 			return false, util.NewZaxError(err.Error())
 		}
@@ -125,8 +127,8 @@ func (service *OrgService) FindOrgById(id int64) (*model.SysOrg, error) {
 }
 
 // 查询子组织
-func (service *OrgService) FindChildren(parentID int64) ([]*model.SysOrg, error) {
-	return service.orgRepo.SelectByParentID(parentID)
+func (service *OrgService) FindChildren(orgID int64) ([]*model.SysOrg, error) {
+	return service.orgRepo.SelectByParentID(orgID)
 }
 
 // 查询组织树. 如果 rootOrgID 为 0, 则查询所有组织树. 否则查询指定组织树
@@ -144,7 +146,7 @@ func (service *OrgService) FindOrgTrees(rootOrgID int64) ([]*model.SysOrg, error
 		if err != nil {
 			return nil, util.NewZaxErrorf("查询根组织失败, 根组织ID:%d", rootOrgID)
 		}
-		if org.ParentID != 0 {
+		if org.ParentID != nil && *org.ParentID != 0 {
 			return nil, util.NewZaxErrorf("不是根组织, 组织ID:%d", rootOrgID)
 		}
 		rootOrgs = append(rootOrgs, org)

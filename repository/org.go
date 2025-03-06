@@ -46,7 +46,7 @@ func (repo *OrgRepository) UpdateSelective(tx *sqlx.Tx, org *model.SysOrg) error
 	if org.Comment != nil && *org.Comment != "" {
 		fields = append(fields, "comment = :comment")
 	}
-	if org.ParentID != 0 {
+	if org.ParentID != nil {
 		fields = append(fields, "parent_id = :parent_id")
 	}
 	if org.UpdateTime != nil {

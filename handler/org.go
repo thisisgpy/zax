@@ -65,10 +65,10 @@ func (h *OrgHandler) FindOrgById(c *gin.Context) {
 	Success(c, org)
 }
 
-// /org/children/:parentID
+// /org/children/:orgID
 func (h *OrgHandler) FindChildren(c *gin.Context) {
-	parentID, _ := strconv.ParseInt(c.Param("parentID"), 10, 64)
-	orgs, err := h.orgService.FindChildren(parentID)
+	orgID, _ := strconv.ParseInt(c.Param("orgID"), 10, 64)
+	orgs, err := h.orgService.FindChildren(orgID)
 	if err != nil {
 		Error(c, err.Error())
 		return
@@ -85,4 +85,26 @@ func (h *OrgHandler) FindOrgTrees(c *gin.Context) {
 		return
 	}
 	Success(c, trees)
+}
+
+// /org/current
+func (h *OrgHandler) FindCurrentOrgTree(c *gin.Context) {
+	orgID, _ := strconv.ParseInt(c.DefaultQuery("orgID", "0"), 10, 64)
+	tree, err := h.orgService.FindCurrentOrgTree(orgID)
+	if err != nil {
+		Error(c, err.Error())
+		return
+	}
+	Success(c, tree)
+}
+
+// /org/descendants/:orgID
+func (h *OrgHandler) FindDescendants(c *gin.Context) {
+	orgID, _ := strconv.ParseInt(c.Param("orgID"), 10, 64)
+	descendants, err := h.orgService.FindDescendants(orgID)
+	if err != nil {
+		Error(c, err.Error())
+		return
+	}
+	Success(c, descendants)
 }
